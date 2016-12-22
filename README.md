@@ -1,6 +1,6 @@
 This package provides eclipse-like forward/backward navigation
-bound by default to <C-left> (backward-forward-previous-location)
-and <C-right> (backward-forward-next-location)
+bound by default to C-left (backward-forward-previous-location)
+and C-right (backward-forward-next-location)
 
 More Info:
 backward-forward hooks onto "push-mark" operations and keeps
