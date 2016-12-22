@@ -12,7 +12,9 @@ of marked locations using <C-left> and <C-right> (or feel free to change the key
 Many Emacs commands (such as searching or switching buffers with certain packages enabled)
 invoke push-mark.
 Other Emacs commands can be configured to invoke push mark using the convention below:
-     (advice-add 'ggtags-find-tag-dwim :before #'backward-forward-push-mark-wrapper)
+```elisp
+(advice-add 'ggtags-find-tag-dwim :before #'backward-forward-push-mark-wrapper)
+```
  You can see examples of the above convention in backward-forward.el
 
 Use C-h k to see what command a given key sequence is invoking.
