@@ -1,9 +1,9 @@
-;;; backward-forward.el --- simple navigation backwards and forwards across marks
+;;; backward-forward.el --- navigation backwards and forwards across marks
 
-;; Copyright (C) 2016 Currell Berry 
+;; Copyright (C) 2016 Currell Berry
 
 ;; Author: Currell Berry <currellberry@gmail.com>
-;; Keywords: navigation backward forward
+;; Keywords: navigation convenience backward forward
 ;; Homepage: https://gitlab.com/vancan1ty/emacs-backward-forward/tree/master
 ;; Version: 0.1
 ;; Package-Version: 20161221.1
@@ -25,134 +25,133 @@
 ;;; Commentary:
 ;; Summary:
 ;; this package provides eclipse-like forward/backward navigation
-;; bound by default to <C-left> (berry-previous-location)
-;; and <C-right> (berry-next-location)
+;; bound by default to <C-left> (backward-forward-previous-location)
+;; and <C-right> (backward-forward-next-location)
+;;
 ;; More Info:
 ;; backward-forward hooks onto "push-mark" operations and keeps
-;; track of all such operations in a global list of marks called overall-mark-ring
+;; track of all such operations in a global list of marks called backward-forward-mark-ring
 ;; this enables easy navigation forwards and backwards in your history
 ;; of marked locations using <C-left> and <C-right> (or feel free to change the keybindings).
-;; Many emacs commands (such as searching or switching buffers)
-;; invoke push-mark.  If there is an operation which you commonly do which
-;; is not generating marks, but which you wish was, you may follow the below
-;; template to hook a call to push-mark onto the command of your choice
-;;      (advice-add 'ggtags-find-tag-dwim :before #'berry-push-mark-wrapper)
-
-;; the above line of code runs berry-push-mark-wrapper before ggtags-find-tag-dwim
-;; (by doing so, ggtags tag lookups become navigable in my history)
+;;
+;; Many Emacs commands (such as searching or switching buffers with certain packages enabled)
+;; invoke push-mark.
+;; Other Emacs commands can be configured to invoke push mark using the system below:
+;;      (advice-add 'ggtags-find-tag-dwim :before #'backward-forward-push-mark-wrapper)
+;;  You can see examples of the above convention below.
 ;;
 ;; Use C-h k to see what command a given key sequence is invoking.
 ;;
-;; to use this package, install though the usual emacs package install mechanism
+;; to use this package, install though the usual Emacs package install mechanism
 ;; then put the following in your .emacs
 ;;
-;;  ;(setf evil-compatibility-mode t) ;the line to the left is optional,
-;;  ; and recommended only if you are using evil mode
+;;    ;(setf backward-forward-evil-compatibility-mode t) ;the line to the left is optional,
+;;          ; and recommended only if you are using evil mode
+;;    (require 'backward-forward)
+;;    (backward-forward-mode t)
 ;;
-;; (require 'backward-forward)
-;; (backward-forward-mode t)
 ;;
 ;; | Commmand                | Keybinding |
 ;; |-------------------------+------------|
-;; | berry-previous-location | <C-left>   |
-;; | berry-next-location     | <C-right>  |
+;; | backward-forward-previous-location | <C-left>   |
+;; | backward-forward-next-location     | <C-right>  |
 
 ;;; Code:
 (require 'cl)
+
+(defvar backward-forward-evil-compatibility-mode nil
+  "If true, sets up for better UX when using evil.")
+
+(defvar backward-forward-mark-ring nil
+  "The list of saved marks, bringing together the global mark ring and the local mark ring into one ring.")
+
+(defvar backward-forward-mark-ring-max 32
+  "Maximum size of overall mark ring.  Start discarding off end if gets this big.")
+
+(defvar backward-forward-mark-ring-traversal-position 0
+  "Stores the traversal position within the backward-forward-mark-ring.
+Gets modified by backward-forward-previous-location and
+backward-forward-next-location.
+Gets reset to zero whenever backward-forward-after-push-mark runs.")
+
+(defvar *backward-forward-in-progress* nil
+  "Suppresses generation of marks in backward-forward-ring.
+Dynamically bound to during the navigation process.")
 
 ;;;###autoload
 (define-minor-mode backward-forward-mode
   "enables or disable backward-forward minor mode.
 
 when backward-forward mode is enabled, it keeps track of mark pushes across
-all buffers in a variable overall-mark-ring, and allows you to navigate backwards
+all buffers in a variable backward-forward-mark-ring, and allows you to navigate backwards
 and forwards across these marks using <C-left> and <C-right>.  to customize
-the navigation behavior one must customize the mark pushing behavior -- 
+the navigation behavior one must customize the mark pushing behavior --
 add 'advice' to a command to make it push a mark before invocation if you
 want it to be tracked.  see backward-forward.el for examples and more
 information.
 "
   :keymap (let ((map (make-sparse-keymap)))
-            (define-key map (kbd "<C-left>") #'berry-previous-location)
-            (define-key map (kbd "<C-right>") #'berry-next-location)
+            (define-key map (kbd "<C-left>") #'backward-forward-previous-location)
+            (define-key map (kbd "<C-right>") #'backward-forward-next-location)
             map
             )
   :global t
   (if backward-forward-mode
       (progn
-        (advice-add 'push-mark :after #'berry-after-push-mark)
-        (advice-add 'ggtags-find-tag-dwim :before #'berry-push-mark-wrapper)
-        (unless evil-compatibility-mode
-          (advice-add 'switch-to-buffer :before #'berry-push-mark-wrapper))
+        (advice-add 'push-mark :after #'backward-forward-after-push-mark)
+        (advice-add 'ggtags-find-tag-dwim :before #'backward-forward-push-mark-wrapper)
+        (unless backward-forward-evil-compatibility-mode
+          (advice-add 'switch-to-buffer :before #'backward-forward-push-mark-wrapper))
         )
     (progn
-        (advice-remove 'push-mark #'berry-after-push-mark)
+        (advice-remove 'push-mark #'backward-forward-after-push-mark)
         (advice-remove 'ggtags-find-tag-dwim #'push-mark)
-        (advice-remove 'switch-to-buffer #'berry-push-mark-wrapper)
+        (advice-remove 'switch-to-buffer #'backward-forward-push-mark-wrapper)
         )))
 
-(defvar evil-compatibility-mode nil
-  "If true, sets up for better UX when using evil.")
-
-(defvar overall-mark-ring nil
-  "The list of saved marks, bringing together the global mark ring and the local mark ring into one ring.")
-
-(defvar overall-mark-ring-max 32
-  "Maximum size of overall mark ring.  Start discarding off end if gets this big.")
-
-(defvar overall-mark-ring-traversal-position 0
-  "stores the current traversal position within the overall-mark-ring
-i.e. if you are using berry-previous-location or berry-next-location, then this stores
-where you currently are in your traversal of your position history
-gets reset to zero whenever bery-after-push-mark runs")
-
-(defvar *forward-backward-in-progress* nil
-  "dynamically bound to so that we can ignore marks generated 
-   as part of the process of navigating forward/backwards using this package's functions.")
-
-(defun berry-after-push-mark (&optional location nomsg activate)
-  "
-zeros overall-mark-ring-traversal-position
-pushes the just-created mark by push-mark onto overall-mark-ring
-(if we exceed overall-mark-ring-max then old marks are pushed off)
-
-then calls the standard push-mark
+(defun backward-forward-after-push-mark (&optional location nomsg activate)
+  "Handles mark-tracking work for backward-forward.
+ignores its arguments LOCATION, NOMSG, ACTIVATE
+Uses following steps:
+zeros backward-forward-mark-ring-traversal-position
+pushes the just-created mark by `push-mark' onto backward-forward-mark-ring
+\(If we exceed backward-forward-mark-ring-max then old marks are pushed off\)
 
 note that perhaps this should establish one ring per window in the future"
-(if (not *forward-backward-in-progress*)
+(if (not *backward-forward-in-progress*)
     (progn
-;;      (message "berry-after-push-mark %S %S %S" location nomsg activate)
-      (setf overall-mark-ring-traversal-position 0)
+;;      (message "backward-forward-after-push-mark %S %S %S" location nomsg activate)
+      (setf backward-forward-mark-ring-traversal-position 0)
       (unless (null (mark t))
         (let* ((marker (mark-marker))
                (position (marker-position marker))
                (buffer (marker-buffer marker)))
           ;;don't insert duplicate marks
-          (if (or (eql (length overall-mark-ring) 0)
-                  (not (and (eql position (marker-position (elt overall-mark-ring 0)))
-                            (eql buffer (marker-buffer (elt overall-mark-ring 0))))))
+          (if (or (eql (length backward-forward-mark-ring) 0)
+                  (not (and (eql position (marker-position (elt backward-forward-mark-ring 0)))
+                            (eql buffer (marker-buffer (elt backward-forward-mark-ring 0))))))
               (progn
 ;;                (message "pushing marker %S" marker)
-                (setq overall-mark-ring (cons (copy-marker marker) overall-mark-ring)))))
+                (setq backward-forward-mark-ring (cons (copy-marker marker) backward-forward-mark-ring)))))
         ;;purge excess entries from the end of the list
-        (when (> (length overall-mark-ring) overall-mark-ring-max)
-          (move-marker (car (nthcdr overall-mark-ring-max overall-mark-ring)) nil)
-          (setcdr (nthcdr (1- overall-mark-ring-max) overall-mark-ring) nil))))
+        (when (> (length backward-forward-mark-ring) backward-forward-mark-ring-max)
+          (move-marker (car (nthcdr backward-forward-mark-ring-max backward-forward-mark-ring)) nil)
+          (setcdr (nthcdr (1- backward-forward-mark-ring-max) backward-forward-mark-ring) nil))))
   ;;  (message "f/b in progress!")
   ))
-
           
-(defun berry-go-to-marker (marker)
-  "see pop-to-global-mark for where most of this code came from"
+(defun backward-forward-go-to-marker (marker)
+  "See pop-to-global-mark for where most of this code came from.
+Argument MARKER the marker, in any buffer, to go to."
   (let* ((buffer (marker-buffer marker))
          (position (marker-position marker))
-         (*forward-backward-in-progress* t))
+         (*backward-forward-in-progress* t))
     (if (null buffer)
         (message "buffer no longer exists.")
       (progn
         (if (eql buffer (current-buffer))
             (goto-char marker)
-          (progn 
+          (progn
             (set-buffer buffer)
             (or (and (>= position (point-min))
                      (<= position (point-max)))
@@ -162,52 +161,56 @@ note that perhaps this should establish one ring per window in the future"
             (goto-char position)
             (switch-to-buffer buffer)))))))
 
-(defun berry-previous-location ()
-    "increments overall-mark-ring-traversal-position
-     and jumps to the mark at that position
-     borrows code from pop-global-mark"
+(defun backward-forward-previous-location ()
+  "Used to navigate to the previous position on backward-forward-mark-ring.
+1. Increments backward-forward-mark-ring-traversal-position.
+2. Jumps to the mark at that position.
+Borrows code from `pop-global-mark'."
   (interactive)
-  (if (and (eql overall-mark-ring-traversal-position 0)
-           (not (eql (marker-position (elt overall-mark-ring 0)) (point))))
+  (if (and (eql backward-forward-mark-ring-traversal-position 0)
+           (not
+            (and (eql (marker-buffer (elt backward-forward-mark-ring 0)) (current-buffer))
+                  (eql (marker-position (elt backward-forward-mark-ring 0)) (point)))))
       ;;then we are at the beginning of our navigation chain and we want to mark the current position
       (push-mark))
-  (if (< overall-mark-ring-traversal-position (1- (length overall-mark-ring)))
-      (incf overall-mark-ring-traversal-position)
+  (if (< backward-forward-mark-ring-traversal-position (1- (length backward-forward-mark-ring)))
+      (incf backward-forward-mark-ring-traversal-position)
     (message "no more marks to visit!"))
-  (let* ((marker (elt overall-mark-ring overall-mark-ring-traversal-position)))
-    (berry-go-to-marker marker)))
+  (let* ((marker (elt backward-forward-mark-ring backward-forward-mark-ring-traversal-position)))
+    (backward-forward-go-to-marker marker)))
 
-;;(marker-buffer (elt overall-mark-ring 3))
+;;(marker-buffer (elt backward-forward-mark-ring 3))
 
-(defun berry-next-location ()
-    "decrements overall-mark-ring-traversal-position
-     and jumps to the mark at that position
-     borrows code from pop-global-mark"
+(defun backward-forward-next-location ()
+    "Used to navigate to the next position on backward-forward-mark-ring.
+1. Decrements backward-forward-mark-ring-traversal-position.
+2. Jumps to the mark at that position.
+Borrows code from `pop-global-mark'."
   (interactive)
-  (if (> overall-mark-ring-traversal-position 0)
-      (decf overall-mark-ring-traversal-position)
+  (if (> backward-forward-mark-ring-traversal-position 0)
+      (decf backward-forward-mark-ring-traversal-position)
     (message "you are already at the most current mark!"))
-  (let* ((marker (elt overall-mark-ring overall-mark-ring-traversal-position)))
-    (berry-go-to-marker marker)))
+  (let* ((marker (elt backward-forward-mark-ring backward-forward-mark-ring-traversal-position)))
+    (backward-forward-go-to-marker marker)))
 
-(defun berry-push-mark-wrapper (&rest args)
-  "allows one to bind push-mark to various commands of your choosing"
+(defun backward-forward-push-mark-wrapper (&rest args)
+  "Allows one to bind push-mark to various commands of your choosing.
+Optional argument ARGS completely ignored"
   (push-mark))
 
-
-;;(global-set-key (kbd "<C-left>") 'berry-previous-location)
-;;(global-set-key (kbd "<C-right>") 'berry-next-location)
+;;(global-set-key (kbd "<C-left>") 'backward-forward-previous-location)
+;;(global-set-key (kbd "<C-right>") 'backward-forward-next-location)
 ;;(defun my-tracing-function (&optional location nomsg activate)
 ;;  (message "push-mark %S %S %S" location nomsg activate)
-;;  (berry-after-push-mark location nomsg activate))
+;;  (backward-forward-after-push-mark location nomsg activate))
 
-;;(elt overall-mark-ring 0)
+;;(elt backward-forward-mark-ring 0)
 ;;(define-key (current-global-map) (kbd "C-[") nil)
 ;;(define-key (current-global-map) (kbd "C-]") nil)
-;;(define-key (current-global-map) (kbd "<M-left>") 'berry-previous-location)
-;;(define-key (current-global-map) (kbd "<M-right>") 'berry-next-location)
-;;(global-set-key (kbd "<M-left>") 'berry-previous-location)
-;;(global-set-key (kbd "<M-right>") 'berry-next-location)
+;;(define-key (current-global-map) (kbd "<M-left>") 'backward-forward-previous-location)
+;;(define-key (current-global-map) (kbd "<M-right>") 'backward-forward-next-location)
+;;(global-set-key (kbd "<M-left>") 'backward-forward-previous-location)
+;;(global-set-key (kbd "<M-right>") 'backward-forward-next-location)
 
 ;;(advice-remove 'push-mark #'my-tracing-function)
 ;;(selected-window)
@@ -216,10 +219,10 @@ note that perhaps this should establish one ring per window in the future"
 ;; (self-insert-command) runs post-self-insert-hook after it is done.  need to add something on to that in order to push an entry onto
 ;; my undo list if necessary
 ;; listen to mouse-set-point?
-;;(defun berry-post-insert-function ()
+;;(defun backward-forward-post-insert-function ()
 ;;  
 ;;  )
-;;(setf overall-mark-ring nil)
+;;(setf backward-forward-mark-ring nil)
 
 (provide 'backward-forward)
 ;;; backward-forward.el ends here
