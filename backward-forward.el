@@ -4,7 +4,7 @@
 
 ;; Author: Currell Berry <currellberry@gmail.com>
 ;; Keywords: navigation backward forward
-;; Homepage: 
+;; Homepage: https://gitlab.com/vancan1ty/emacs-backward-forward/tree/master
 ;; Version: 0.1
 ;; Package-Version: 20161221.1
 ;; Package-Requires: ((emacs "24.5"))
@@ -92,7 +92,7 @@ information.
         )))
 
 (defvar evil-compatibility-mode nil
-  "if true, sets up for better UX when using evil")
+  "If true, sets up for better UX when using evil.")
 
 (defvar overall-mark-ring nil
   "The list of saved marks, bringing together the global mark ring and the local mark ring into one ring.")
@@ -102,9 +102,9 @@ information.
 
 (defvar overall-mark-ring-traversal-position 0
   "stores the current traversal position within the overall-mark-ring
-   i.e. if you are using berry-previous-location or berry-next-location, then this stores
-   where you currently are in your traversal of your position history
-   gets reset to zero whenever bery-after-push-mark runs")
+i.e. if you are using berry-previous-location or berry-next-location, then this stores
+where you currently are in your traversal of your position history
+gets reset to zero whenever bery-after-push-mark runs")
 
 (defvar *forward-backward-in-progress* nil
   "dynamically bound to so that we can ignore marks generated 
