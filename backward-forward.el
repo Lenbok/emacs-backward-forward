@@ -73,7 +73,7 @@ Gets modified by backward-forward-previous-location and
 backward-forward-next-location.
 Gets reset to zero whenever backward-forward-after-push-mark runs.")
 
-(defvar *backward-forward-in-progress* nil
+(defvar backward-forward-in-progress nil
   "Suppresses generation of marks in backward-forward-ring.
 Dynamically bound to during the navigation process.")
 
@@ -117,7 +117,7 @@ pushes the just-created mark by `push-mark' onto backward-forward-mark-ring
 \(If we exceed backward-forward-mark-ring-max then old marks are pushed off\)
 
 note that perhaps this should establish one ring per window in the future"
-(if (not *backward-forward-in-progress*)
+(if (not backward-forward-in-progress)
     (progn
 ;;      (message "backward-forward-after-push-mark %S %S %S" location nomsg activate)
       (setf backward-forward-mark-ring-traversal-position 0)
@@ -144,7 +144,7 @@ note that perhaps this should establish one ring per window in the future"
 Argument MARKER the marker, in any buffer, to go to."
   (let* ((buffer (marker-buffer marker))
          (position (marker-position marker))
-         (*backward-forward-in-progress* t))
+         (backward-forward-in-progress t))
     (if (null buffer)
         (message "buffer no longer exists.")
       (progn
