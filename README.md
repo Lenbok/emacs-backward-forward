@@ -26,5 +26,5 @@ then put the following in your .emacs
 
 | Commmand                | Keybinding |
 |-------------------------+------------|
-| backward-forward-previous-location | <C-left>   |
-| backward-forward-next-location     | <C-right>  |
+| backward-forward-previous-location | "<C-left>"   |
+| backward-forward-next-location     | "<C-right>"  |
