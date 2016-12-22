@@ -19,12 +19,13 @@ Use C-h k to see what command a given key sequence is invoking.
 to use this package, install though the usual Emacs package install mechanism
 then put the following in your .emacs
 
-   ;(setf backward-forward-evil-compatibility-mode t) ;the line to the left is optional,
-         ; and recommended only if you are using evil mode
-   (backward-forward-mode t)
+```elisp
+;(setf backward-forward-evil-compatibility-mode t) ;the line to the left is optional, and recommended only if you are using evil mode
+(backward-forward-mode t)
+```
 
 
 | Commmand                | Keybinding |
 |-------------------------+------------|
-| backward-forward-previous-location | "<C-left>"   |
-| backward-forward-next-location     | "<C-right>"  |
+| backward-forward-previous-location | C-left  |
+| backward-forward-next-location     | C-right |
