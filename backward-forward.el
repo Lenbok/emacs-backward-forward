@@ -47,7 +47,6 @@
 ;;
 ;;    ;(setf backward-forward-evil-compatibility-mode t) ;the line to the left is optional,
 ;;          ; and recommended only if you are using evil mode
-;;    (require 'backward-forward)
 ;;    (backward-forward-mode t)
 ;;
 ;;

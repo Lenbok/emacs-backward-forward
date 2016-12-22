@@ -4,3 +4,6 @@
 
 (load "/projects/emacs-backward-forward/backward-forward.el")
 (backward-forward-mode t)
+
+(require 'package)
+(package-initialize)
