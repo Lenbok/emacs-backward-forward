@@ -56,7 +56,7 @@
 ;; | backward-forward-next-location     | <C-right>  |
 
 ;;; Code:
-(require 'cl)
+(require 'cl-lib)
 
 (defvar backward-forward-evil-compatibility-mode nil
   "If true, sets up for better UX when using evil.")
@@ -173,7 +173,7 @@ Borrows code from `pop-global-mark'."
       ;;then we are at the beginning of our navigation chain and we want to mark the current position
       (push-mark))
   (if (< backward-forward-mark-ring-traversal-position (1- (length backward-forward-mark-ring)))
-      (incf backward-forward-mark-ring-traversal-position)
+      (cl-incf backward-forward-mark-ring-traversal-position)
     (message "no more marks to visit!"))
   (let* ((marker (elt backward-forward-mark-ring backward-forward-mark-ring-traversal-position)))
     (backward-forward-go-to-marker marker)))
@@ -187,7 +187,7 @@ Borrows code from `pop-global-mark'."
 Borrows code from `pop-global-mark'."
   (interactive)
   (if (> backward-forward-mark-ring-traversal-position 0)
-      (decf backward-forward-mark-ring-traversal-position)
+      (cl-decf backward-forward-mark-ring-traversal-position)
     (message "you are already at the most current mark!"))
   (let* ((marker (elt backward-forward-mark-ring backward-forward-mark-ring-traversal-position)))
     (backward-forward-go-to-marker marker)))

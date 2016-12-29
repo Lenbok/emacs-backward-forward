@@ -1,0 +1,7 @@
+The files in this directory facilitate doing simple testing of backward-forward.
+
+melpatest.sh runs a melpa build and copies the resulting package into this directory for later use
+nomelpatest.sh copies the latest working copy in the .. directory into this directory for later use
+backward-forward-basic-test.sh supports two targets
+	maintest -- runs a headless test verifying that the basic functionality works
+	auxiliary -- launches emacs with various flags facilitating manual testing
