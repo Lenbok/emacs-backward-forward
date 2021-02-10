@@ -195,7 +195,7 @@ Borrows code from `pop-global-mark'."
 (defun backward-forward-push-mark-wrapper (&rest args)
   "Allows one to bind push-mark to various commands of your choosing.
 Optional argument ARGS completely ignored"
-  (push-mark))
+  (push-mark nil t))
 
 ;;(global-set-key (kbd "<C-left>") 'backward-forward-previous-location)
 ;;(global-set-key (kbd "<C-right>") 'backward-forward-next-location)
